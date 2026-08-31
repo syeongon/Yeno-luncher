@@ -1,20 +1,15 @@
-YEON Launcher v0.4.0
+YEON Launcher v0.4.1
 
-[인스턴스가 없을 때]
-마크 고양이 얼굴과 함께
-"새로운 인스턴스를 생성해 보세요"가 표시됩니다.
+[이번 수정]
+빌드 오류 수정 버전입니다.
 
-[Modrinth 모드 설치]
-1. Fabric / Forge / NeoForge / Quilt 인스턴스를 선택합니다.
-2. Modrinth 검색창에 sodium, iris, jei 같은 모드 이름을 입력합니다.
-3. 검색 버튼을 누릅니다.
-4. 원하는 모드의 설치를 누릅니다.
-5. 해당 인스턴스의 mods 폴더에 저장됩니다.
-6. 플레이를 누르면 설치된 모드가 적용된 상태로 Minecraft가 실행됩니다.
+GitHub Actions에서 다시 실행:
+Actions -> Build YEON Launcher Windows -> Run workflow
 
-[로그인]
-로그인 설정에서 오프라인 프로필 이름을 저장할 수 있습니다.
-Microsoft 정식 로그인은 OAuth 앱 등록값 연결 후 완성하는 구조입니다.
+성공하면 Artifacts에서:
+YEON-Launcher-Windows-v0.4.1
+을 다운로드하면 됩니다.
 
-[빌드]
-GitHub -> Actions -> Build YEON Launcher Windows -> Run workflow
+[오류 원인]
+minecraft-java-rs-core 0.4.1의 LaunchOptions 구조가 바뀌어서
+path 타입과 필수 필드가 맞지 않았습니다.

@@ -16,7 +16,7 @@ use std::{
     path::{Path, PathBuf},
     time::{SystemTime, UNIX_EPOCH},
 };
-use tauri::{Emitter, Manager};
+use tauri::Emitter;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 use zip::ZipArchive;
@@ -1055,7 +1055,7 @@ async fn launch_instance(
     };
 
     let options = LaunchOptions {
-        path: root.to_string_lossy().into_owned(),
+        path: root.clone(),
         version: meta.minecraft_version.clone(),
         authenticator: auth,
         memory: MemoryConfig {
@@ -1065,6 +1065,7 @@ async fn launch_instance(
         loader: loader_config(&meta)?,
         timeout_secs: 60,
         download_concurrency: 10,
+        verify_concurrency: 4,
         java: JavaOptions::default(),
         screen: ScreenConfig::default(),
         verify: true,
@@ -1075,6 +1076,9 @@ async fn launch_instance(
         mcp: None,
         intel_enabled_mac: false,
         bypass_offline: true,
+        skip_bundle_check: false,
+        force_ipv4: false,
+        dns: None,
     };
 
     let launcher = Launcher::new(options);

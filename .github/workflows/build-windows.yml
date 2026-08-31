@@ -6,31 +6,31 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-windows:
+  windows:
     runs-on: windows-latest
 
     steps:
-      - name: 코드 가져오기
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Node.js 설치
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "22"
 
-      - name: Rust 설치
+      - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: 프론트엔드 패키지 설치
+      - name: Install frontend dependencies
         run: npm install
 
-      - name: YEON Launcher 빌드
+      - name: Build YEON Launcher
         run: npm run tauri:build
 
-      - name: Windows 설치 파일 업로드
+      - name: Upload Windows installers
         uses: actions/upload-artifact@v4
         with:
-          name: YEON-Launcher-Windows-v0.4.0
+          name: YEON-Launcher-Windows-v0.4.1
           path: |
             src-tauri/target/release/bundle/nsis/**
             src-tauri/target/release/bundle/msi/**

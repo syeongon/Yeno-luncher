@@ -1,9 +1,9 @@
 @echo off
 chcp 65001 >nul
-title YEON Launcher v0.4.0
+title YEON Launcher v0.4.1
 
 echo ==========================================
-echo       YEON Launcher v0.4.0
+echo       YEON Launcher v0.4.1
 echo ==========================================
 echo.
 

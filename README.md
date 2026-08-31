@@ -1,45 +1,41 @@
-# YEON Launcher v0.4.0
+# YEON Launcher v0.4.1
 
-## v0.4.0 변경사항
+## v0.4.1 빌드 오류 수정
 
-- 인스턴스가 하나도 없을 때 마인크래프트 스타일 고양이 얼굴 표시
-- 빈 화면 문구를 `새로운 인스턴스를 생성해 보세요`로 변경
-- Modrinth 공식 API 기반 모드 검색 추가
-- 선택한 인스턴스의 Minecraft 버전과 로더 조건으로 Modrinth 모드 검색
-- Modrinth 모드 설치 시 해당 인스턴스의 `mods` 폴더에 자동 저장
-- 필수 의존성(required dependency)도 가능한 범위에서 함께 설치
-- Play를 누르면 설치된 모드 개수를 적용 상태로 표시한 뒤 Minecraft 실행
-- 로그인 설정 화면 추가
-- 오프라인 프로필 로그인 기능 추가
-- Microsoft 로그인 연결 준비 영역 추가
+GitHub Actions 빌드에서 발생한 Rust 컴파일 오류를 수정한 버전입니다.
 
-## Modrinth API
+수정한 내용:
 
-사용 API:
+- `LaunchOptions.path`가 `String`이 아니라 `PathBuf`를 요구하므로 `root.clone()`으로 수정
+- `minecraft-java-rs-core 0.4.1`의 `LaunchOptions`에 새로 필요한 필드 추가
+  - `verify_concurrency`
+  - `skip_bundle_check`
+  - `force_ipv4`
+  - `dns`
+- 사용하지 않는 `Manager` import 제거
+- `minecraft-java-rs-core`를 `=0.4.1`로 고정해서 다음 패치 버전에서 같은 구조 변경이 다시 생기지 않도록 처리
 
-- `GET https://api.modrinth.com/v2/search`
-- `GET https://api.modrinth.com/v2/project/{id|slug}/version`
-- `GET https://api.modrinth.com/v2/version/{id}`
+## 유지되는 기능
 
-런처는 `User-Agent: pullgena/yeon-launcher/0.4.0`을 사용합니다.
+- 인스턴스가 없을 때 마크 스타일 고양이 얼굴 표시
+- "새로운 인스턴스를 생성해 보세요" 안내
+- Modrinth 공식 API 기반 모드 검색/설치
+- 인스턴스별 mods 폴더에 모드 설치
+- Play 시 해당 인스턴스 모드가 적용된 상태로 Minecraft 실행
+- 로그인 설정 화면
+- 오프라인 프로필 실행
+- Microsoft 로그인 준비 UI
 
-## Minecraft 실행과 모드 적용
+## 빌드
 
-각 인스턴스는 별도의 `mods` 폴더를 가집니다.
-Modrinth나 드래그 앤 드롭으로 설치한 `.jar`는 해당 인스턴스의 `mods`에 저장됩니다.
-`▶ 플레이`를 누르면 이 인스턴스 폴더 기준으로 Minecraft가 실행됩니다.
+GitHub Actions에서:
 
-## 로그인
+```text
+Actions → Build YEON Launcher Windows → Run workflow
+```
 
-현재는 오프라인 프로필 로그인으로 개발/테스트 실행을 지원합니다.
-Microsoft 정품 로그인은 OAuth 앱 등록값이 필요하므로 다음 단계에서 실제 토큰 흐름을 붙이면 됩니다.
+Artifact 이름:
 
-## 실행
-
-`START_YEON_DEV.bat`
-
-## Windows 빌드
-
-`BUILD_WINDOWS.bat`
-
-또는 GitHub Actions → `Build YEON Launcher Windows`.
+```text
+YEON-Launcher-Windows-v0.4.1
+```
