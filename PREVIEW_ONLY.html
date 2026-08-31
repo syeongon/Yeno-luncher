@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YEON Launcher v0.4.0 Preview</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0b0d10;color:#fff;font-family:"Segoe UI",sans-serif}
+.shell{min-height:100vh;display:grid;grid-template-columns:230px 1fr}
+aside{border-right:1px solid #22262e;padding:26px 16px;background:#090b0e}.brand{display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:.12em;margin-bottom:28px}.brand img{width:40px;height:40px;border-radius:9px;object-fit:cover}.nav{padding:12px;border-radius:10px;color:#929aa7}.nav.on{background:#191d24;color:#fff}
+main{padding:44px;max-width:1060px;width:100%;margin:auto}.head{display:flex;justify-content:space-between;align-items:center}.btn{border:0;background:#7769ff;color:#fff;border-radius:10px;padding:11px 15px;font-weight:800}.card{margin-top:24px;border:1px solid #252a32;background:#12151a;border-radius:14px;padding:20px}
+.overlay{position:fixed;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.76);backdrop-filter:blur(8px)}.modal{width:min(500px,calc(100% - 40px));text-align:center;background:#12151a;border:1px solid #303640;border-radius:20px;padding:30px}.icon{width:86px;height:86px;border-radius:18px;object-fit:cover}.eyebrow{color:#8178ff;font-size:10px;font-weight:900;letter-spacing:.15em}.muted{color:#8d96a4}.versions{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;background:#0d1014;border:1px solid #262b33;border-radius:12px;padding:14px;margin-top:20px}.actions{display:grid;grid-template-columns:1fr 110px;gap:9px;margin-top:18px}.later{background:#171a20;border:1px solid #303640;color:#aeb6c3;border-radius:11px}
+</style></head>
+<body>
+<div class="shell"><aside><div class="brand"><img src="public/icon.png" alt=""><span>YEON</span></div><div class="nav on">▦ 라이브러리</div><div class="nav">🧩 모드</div><div class="nav">⚙ 설정</div></aside><main><div class="head"><div><div class="eyebrow">YEON LAUNCHER</div><h1>내 인스턴스</h1></div><button class="btn">＋ 새 인스턴스</button></div><div class="card">인스턴스가 없으면 마크 고양이 얼굴과 함께 새로운 인스턴스를 생성해 보세요가 표시됩니다. Modrinth 공식 API 검색 영역도 추가되었습니다.</div></main></div>
+<div class="overlay"><section class="modal"><img class="icon" src="public/icon.png" alt="YEON Launcher"><p class="eyebrow">YEON LAUNCHER UPDATE</p><h2>새로운 버전이 나왔습니다. 업데이트를 해주세요</h2><p class="muted">더 안정적인 기능과 최신 변경사항을 사용하려면 새 버전으로 업데이트해 주세요.</p><div class="versions"><div><small class="muted">현재 버전</small><br><b>v0.3.3</b></div><b style="color:#8178ff">→</b><div><small class="muted">새 버전</small><br><b>v0.3.1</b></div></div><button id="detailsBtn" style="width:100%;margin-top:14px;padding:11px;border-radius:10px;border:1px solid #303640;background:#171a20;color:#fff">업데이트 내용 보기 ▼</button>
+<div id="details" style="display:none;margin-top:9px;padding:13px;text-align:left;background:#0d1014;border:1px solid #2a3038;border-radius:10px;color:#aeb6c3">
+<b style="color:#fff">v0.3.2 변경사항</b>
+<p style="line-height:1.55;margin-bottom:0">- 새로운 인스턴스 생성 기능 개선<br>- 모드 설치 안정성 개선<br>- 업데이트 내용 보기 기능 추가</p>
+</div>
+<div class="actions"><button class="btn">업데이트하러 가기</button><button class="later">나중에</button></div></section></div>
+<script>
+const btn=document.getElementById("detailsBtn");
+const details=document.getElementById("details");
+btn.addEventListener("click",()=>{const open=details.style.display!=="none";details.style.display=open?"none":"block";btn.textContent=open?"업데이트 내용 보기 ▼":"업데이트 내용 닫기 ▲";});
+</script>
+</body></html>

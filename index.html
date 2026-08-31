@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b0d10" />
+    <title>YEON Launcher</title>
+    <style>
+      html, body, #root { min-height: 100%; }
+      body {
+        margin: 0;
+        background: #0b0d10;
+        color: #fff;
+        font-family: "Segoe UI", Arial, sans-serif;
+      }
+      .fallback {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 30px;
+      }
+      .fallback > div {
+        background: #15181d;
+        border: 1px solid #292e37;
+        border-radius: 16px;
+        padding: 26px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div class="fallback">
+        <div>
+          <h2>YEON Launcher</h2>
+          <p>실제 앱은 START_YEON_DEV.bat 또는 빌드된 설치 파일로 실행해 주세요.</p>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

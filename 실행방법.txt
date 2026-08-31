@@ -1,0 +1,20 @@
+YEON Launcher v0.4.0
+
+[인스턴스가 없을 때]
+마크 고양이 얼굴과 함께
+"새로운 인스턴스를 생성해 보세요"가 표시됩니다.
+
+[Modrinth 모드 설치]
+1. Fabric / Forge / NeoForge / Quilt 인스턴스를 선택합니다.
+2. Modrinth 검색창에 sodium, iris, jei 같은 모드 이름을 입력합니다.
+3. 검색 버튼을 누릅니다.
+4. 원하는 모드의 설치를 누릅니다.
+5. 해당 인스턴스의 mods 폴더에 저장됩니다.
+6. 플레이를 누르면 설치된 모드가 적용된 상태로 Minecraft가 실행됩니다.
+
+[로그인]
+로그인 설정에서 오프라인 프로필 이름을 저장할 수 있습니다.
+Microsoft 정식 로그인은 OAuth 앱 등록값 연결 후 완성하는 구조입니다.
+
+[빌드]
+GitHub -> Actions -> Build YEON Launcher Windows -> Run workflow
