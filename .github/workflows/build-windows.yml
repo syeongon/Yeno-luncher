@@ -30,7 +30,7 @@ jobs:
       - name: Upload Windows installers
         uses: actions/upload-artifact@v4
         with:
-          name: YEON-Launcher-Windows-v0.4.1
+          name: YEON-Launcher-Windows-v0.4.2
           path: |
             src-tauri/target/release/bundle/nsis/**
             src-tauri/target/release/bundle/msi/**

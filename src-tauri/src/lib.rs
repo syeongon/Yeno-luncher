@@ -1081,7 +1081,7 @@ async fn launch_instance(
         dns: None,
     };
 
-    let launcher = Launcher::new(options);
+    let mut launcher = Launcher::new(options);
     let (tx, mut rx) = mpsc::channel::<LaunchEvent>(512);
 
     let event_app = app.clone();
@@ -1180,7 +1180,6 @@ async fn launch_instance(
                         message,
                     );
                 }
-                _ => {}
             }
         }
     });

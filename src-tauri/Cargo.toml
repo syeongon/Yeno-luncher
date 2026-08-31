@@ -1,6 +1,6 @@
 [package]
 name = "yeon-launcher"
-version = "0.4.1"
+version = "0.4.2"
 description = "YEON Minecraft Launcher"
 authors = ["YEON"]
 edition = "2021"
