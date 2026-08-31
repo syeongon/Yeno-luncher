@@ -1,0 +1,37 @@
+name: Build YEON Launcher Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: 코드 가져오기
+        uses: actions/checkout@v4
+
+      - name: Node.js 설치
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Rust 설치
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 프론트엔드 패키지 설치
+        run: npm install
+
+      - name: YEON Launcher 빌드
+        run: npm run tauri:build
+
+      - name: Windows 설치 파일 업로드
+        uses: actions/upload-artifact@v4
+        with:
+          name: YEON-Launcher-Windows-v0.4.0
+          path: |
+            src-tauri/target/release/bundle/nsis/**
+            src-tauri/target/release/bundle/msi/**
+          if-no-files-found: error
