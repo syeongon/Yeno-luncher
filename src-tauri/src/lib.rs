@@ -80,6 +80,16 @@ struct LauncherEventPayload {
     message: String,
 }
 
+
+#[derive(Debug, Serialize)]
+struct MinecraftInstallCheck {
+    found: bool,
+    official_launcher_found: bool,
+    minecraft_folder_found: bool,
+    checked_paths: Vec<String>,
+    message: String,
+}
+
 #[derive(Debug, Deserialize)]
 struct ModrinthSearchResponse {
     hits: Vec<ModrinthSearchHitRaw>,
@@ -167,6 +177,41 @@ fn root_dir() -> Result<PathBuf, String> {
         .ok_or_else(|| "앱 데이터 폴더를 찾을 수 없습니다.".to_string())?;
 
     Ok(base.join("YEON Launcher").join("minecraft"))
+}
+
+
+fn official_launcher_candidates() -> Vec<PathBuf> {
+    let mut paths = Vec::new();
+
+    if let Some(local) = dirs::data_local_dir() {
+        paths.push(local.join("Programs").join("Minecraft Launcher").join("MinecraftLauncher.exe"));
+        paths.push(local.join("Packages").join("Microsoft.4297127D64EC6_8wekyb3d8bbwe"));
+    }
+
+    if let Some(programs) = std::env::var_os("ProgramFiles") {
+        let base = PathBuf::from(programs);
+        paths.push(base.join("Minecraft Launcher").join("MinecraftLauncher.exe"));
+        paths.push(base.join("WindowsApps").join("Microsoft.4297127D64EC6_8wekyb3d8bbwe"));
+    }
+
+    if let Some(programs_x86) = std::env::var_os("ProgramFiles(x86)") {
+        paths.push(PathBuf::from(programs_x86).join("Minecraft Launcher").join("MinecraftLauncher.exe"));
+    }
+
+    paths
+}
+
+fn minecraft_folder_candidates() -> Vec<PathBuf> {
+    let mut paths = Vec::new();
+    if let Some(roaming) = dirs::config_dir() {
+        paths.push(roaming.join(".minecraft"));
+    }
+    if let Some(home) = dirs::home_dir() {
+        paths.push(home.join("AppData").join("Roaming").join(".minecraft"));
+        paths.push(home.join(".minecraft"));
+        paths.push(home.join("Library").join("Application Support").join("minecraft"));
+    }
+    paths
 }
 
 fn instances_dir() -> Result<PathBuf, String> {
@@ -391,7 +436,7 @@ fn loader_matches(instance_loader: &str, mod_loader: &str) -> bool {
 
 
 fn modrinth_user_agent() -> &'static str {
-    "pullgena/yeon-launcher/0.4.0"
+    "pullgena/yeon-launcher/0.5.0"
 }
 
 fn modrinth_loader_category(loader: &str) -> Result<&'static str, String> {
@@ -604,6 +649,36 @@ async fn install_modrinth_project_recursive(
     .await?;
 
     Ok(version)
+}
+
+#[tauri::command]
+fn check_minecraft_installation() -> Result<MinecraftInstallCheck, String> {
+    let launcher_paths = official_launcher_candidates();
+    let folder_paths = minecraft_folder_candidates();
+
+    let official_launcher_found = launcher_paths.iter().any(|path| path.exists());
+    let minecraft_folder_found = folder_paths.iter().any(|path| path.exists());
+
+    let mut checked_paths = Vec::new();
+    checked_paths.extend(launcher_paths.iter().map(|path| path.to_string_lossy().into_owned()));
+    checked_paths.extend(folder_paths.iter().map(|path| path.to_string_lossy().into_owned()));
+
+    let found = official_launcher_found || minecraft_folder_found;
+    let message = if official_launcher_found {
+        "공식 Minecraft Launcher가 설치된 것으로 보입니다.".to_string()
+    } else if minecraft_folder_found {
+        ".minecraft 폴더가 확인되었습니다. 기존 Minecraft 설치 흔적이 있습니다.".to_string()
+    } else {
+        "이 PC에서 공식 Minecraft Launcher 또는 .minecraft 폴더를 찾지 못했습니다.".to_string()
+    };
+
+    Ok(MinecraftInstallCheck {
+        found,
+        official_launcher_found,
+        minecraft_folder_found,
+        checked_paths,
+        message,
+    })
 }
 
 #[tauri::command]
@@ -1034,9 +1109,9 @@ async fn launch_instance(
     username: String,
 ) -> Result<LaunchResult, String> {
     let mut meta = load_meta(&instance_id)?;
-    let root = root_dir()?;
-    fs::create_dir_all(&root)
-        .map_err(|e| format!("Minecraft 저장 폴더 생성 실패: {e}"))?;
+    let game_dir = instance_dir(&instance_id)?;
+    fs::create_dir_all(&game_dir)
+        .map_err(|e| format!("인스턴스 게임 폴더 생성 실패: {e}"))?;
 
     let clean_username = if username.trim().is_empty() {
         "Player".to_string()
@@ -1055,7 +1130,7 @@ async fn launch_instance(
     };
 
     let options = LaunchOptions {
-        path: root.clone(),
+        path: game_dir.clone(),
         version: meta.minecraft_version.clone(),
         authenticator: auth,
         memory: MemoryConfig {
@@ -1071,7 +1146,7 @@ async fn launch_instance(
         verify: true,
         game_args: vec![],
         jvm_args: vec![],
-        instance: Some(instance_id.clone()),
+        instance: None,
         url: None,
         mcp: None,
         intel_enabled_mac: false,
@@ -1293,11 +1368,11 @@ fn open_update_page(url: String) -> Result<(), String> {
 pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
+            check_minecraft_installation,
             list_instances,
             create_instance,
             update_instance,
             delete_instance,
-            import_mod,
             list_installed_mods,
             search_modrinth_mods,
             install_modrinth_mod,

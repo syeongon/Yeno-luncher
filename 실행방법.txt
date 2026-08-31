@@ -1,21 +1,23 @@
-YEON Launcher v0.4.2
+YEON Launcher v0.5.0
 
-이 버전은 v0.4.1에서 발생한 Rust 빌드 오류를 수정한 버전입니다.
+[빌드]
+GitHub → Actions → Build YEON Launcher Windows → Run workflow
 
-[빌드 방법]
-1. 압축을 풉니다.
-2. 압축 푼 안의 파일들을 GitHub 저장소 최상단에 업로드합니다.
-3. Actions로 이동합니다.
-4. Build YEON Launcher Windows를 실행합니다.
-5. 성공하면 YEON-Launcher-Windows-v0.4.2 Artifact를 다운로드합니다.
+[결과]
+YEON-Launcher-Windows-v0.5.0-NSIS Artifact를 다운로드합니다.
+안에는 NSIS 설치용 .exe가 들어 있습니다.
 
-[수정된 오류]
-cannot borrow `launcher` as mutable
+[릴리스]
+1. 저장소에 파일 업로드
+2. 태그 v0.5.0 생성
+3. GitHub Actions가 자동 실행
+4. Releases에 NSIS .exe가 올라갑니다.
 
-원인:
-minecraft-java-rs-core 0.4.1의 start()가 mutable launcher를 요구했습니다.
-
-수정:
-let launcher = Launcher::new(options);
-↓
-let mut launcher = Launcher::new(options);
+[이번 버전 변경]
+- .jar 끌어넣기 제거
+- Modrinth 공식 API 설치만 사용
+- OAuth 제거
+- Minecraft 설치 확인만 사용
+- settings/mods 적용 경로 수정
+- CMD 창 숨김 설정 추가
+- Minecraft 버전 선택 목록 확대

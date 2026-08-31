@@ -41,5 +41,5 @@ if errorlevel 1 (
 echo.
 echo 빌드 완료!
 echo 설치 파일 위치:
-echo src-tauri\target\release\bundle\
+echo src-tauri\target\release\bundle\nsis\
 pause

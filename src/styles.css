@@ -1284,3 +1284,72 @@ h3 { margin: 0; }
     min-height: 38px;
   }
 }
+
+
+.modrinthOnlyNotice {
+  min-height: 120px;
+  margin-top: 20px;
+  border: 1px solid #293640;
+  border-radius: 14px;
+  background: #11161b;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  text-align: center;
+  padding: 18px;
+}
+
+.modrinthOnlyNotice span {
+  color: #747e8d;
+  font-size: 12px;
+}
+
+.minecraftCheckButton,
+.modalSecondaryButton {
+  width: 100%;
+  margin-top: 9px;
+  border: 1px solid #2f3742;
+  background: #13171d;
+  color: #d9dee6;
+  border-radius: 9px;
+  padding: 9px 10px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.minecraftCheckButton:disabled,
+.modalSecondaryButton:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
+.minecraftOk {
+  color: #7bdc95 !important;
+}
+
+.minecraftWarn {
+  color: #e2ad65 !important;
+}
+
+.successNotice {
+  border-color: #2e5238 !important;
+  background: #101a13 !important;
+  color: #9ad9a9 !important;
+}
+
+.minecraftInstallOption {
+  border-color: #304153;
+}
+
+.quickVersions {
+  flex-wrap: wrap;
+  max-height: 138px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.quickVersions button {
+  margin-bottom: 4px;
+}

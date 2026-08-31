@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getVersion } from "@tauri-apps/api/app";
 import { listen } from "@tauri-apps/api/event";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 
 type LoaderName = "vanilla" | "fabric" | "forge" | "neoforge" | "quilt";
 
@@ -31,10 +30,6 @@ type ModInfo = {
   mod_id: string | null;
 };
 
-type ImportResult = {
-  status: "installed" | "already_installed";
-  mod_info: ModInfo;
-};
 
 type LaunchResult = {
   pid: number | null;
@@ -54,7 +49,7 @@ type RunningInstance = {
   startedAt: number;
 };
 
-type AuthMode = "offline" | "microsoft_ready";
+type AuthMode = "offline";
 
 type ModrinthSearchHit = {
   project_id: string;
@@ -74,6 +69,15 @@ type ModrinthInstallResult = {
   installed_files: string[];
   skipped_files: string[];
   dependency_files: string[];
+};
+
+
+type MinecraftInstallCheck = {
+  found: boolean;
+  official_launcher_found: boolean;
+  minecraft_folder_found: boolean;
+  checked_paths: string[];
+  message: string;
 };
 
 
@@ -144,6 +148,28 @@ const runningStageLabel = (stage: string) => {
 const formatCount = (value: number) =>
   new Intl.NumberFormat("ko-KR").format(value);
 
+
+const MINECRAFT_VERSIONS = [
+  "26.2",
+  "26.1.1",
+  "26.1",
+  "1.21.11",
+  "1.21.10",
+  "1.21.8",
+  "1.21.5",
+  "1.21.4",
+  "1.21.1",
+  "1.20.6",
+  "1.20.4",
+  "1.20.1",
+  "1.19.4",
+  "1.18.2",
+  "1.17.1",
+  "1.16.5",
+  "1.12.2",
+  "1.8.9",
+];
+
 export default function App() {
   const [instances, setInstances] = useState<InstanceInfo[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -151,7 +177,6 @@ export default function App() {
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
   const [busy, setBusy] = useState(false);
   const [launching, setLaunching] = useState(false);
   const [notice, setNotice] = useState("새 인스턴스를 만들거나 기존 인스턴스를 선택하세요.");
@@ -161,13 +186,13 @@ export default function App() {
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [showUpdateDetails, setShowUpdateDetails] = useState(false);
   const [username, setUsername] = useState(() => localStorage.getItem("yeon_username") || "Player");
-  const [authMode, setAuthMode] = useState<AuthMode>(() =>
-    (localStorage.getItem("yeon_auth_mode") as AuthMode | null) || "offline",
-  );
+  const [authMode, setAuthMode] = useState<AuthMode>("offline");
   const [modrinthQuery, setModrinthQuery] = useState("sodium");
   const [modrinthResults, setModrinthResults] = useState<ModrinthSearchHit[]>([]);
   const [modrinthSearching, setModrinthSearching] = useState(false);
   const [modrinthInstalling, setModrinthInstalling] = useState<string | null>(null);
+  const [minecraftCheck, setMinecraftCheck] = useState<MinecraftInstallCheck | null>(null);
+  const [checkingMinecraft, setCheckingMinecraft] = useState(false);
 
   const [newName, setNewName] = useState("새 인스턴스");
   const [newVersion, setNewVersion] = useState("26.2");
@@ -350,76 +375,22 @@ export default function App() {
     return () => unlisten?.();
   }, [selectedId, refreshInstances]);
 
-  const importPaths = useCallback(async (paths: string[]) => {
-    if (!selectedId || !selected) {
-      setNotice("먼저 인스턴스를 선택해 주세요.");
-      return;
+  const checkMinecraft = async () => {
+    setCheckingMinecraft(true);
+    try {
+      const result = await invoke<MinecraftInstallCheck>("check_minecraft_installation");
+      setMinecraftCheck(result);
+      setNotice(result.message);
+    } catch (error) {
+      setNotice(`Minecraft 설치 확인 실패: ${String(error)}`);
+    } finally {
+      setCheckingMinecraft(false);
     }
-
-    if (selected.loader === "vanilla") {
-      setNotice("Vanilla 인스턴스에서는 모드가 실행되지 않습니다. Fabric/Forge/NeoForge/Quilt 인스턴스를 만들어 주세요.");
-      return;
-    }
-
-    const jars = paths.filter((path) => path.toLowerCase().endsWith(".jar"));
-    const ignored = paths.length - jars.length;
-
-    if (!jars.length) {
-      setNotice(".jar 모드 파일만 넣을 수 있습니다.");
-      return;
-    }
-
-    setBusy(true);
-    let installed = 0;
-    let duplicates = 0;
-    const errors: string[] = [];
-
-    for (const sourcePath of jars) {
-      try {
-        const result = await invoke<ImportResult>("import_mod", {
-          sourcePath,
-          instanceId: selectedId,
-        });
-
-        if (result.status === "installed") installed += 1;
-        if (result.status === "already_installed") duplicates += 1;
-      } catch (error) {
-        errors.push(String(error));
-      }
-    }
-
-    await refreshMods(selectedId);
-    await refreshInstances();
-    setBusy(false);
-
-    const parts = [];
-    if (installed) parts.push(`${installed}개 설치`);
-    if (duplicates) parts.push(`${duplicates}개 중복`);
-    if (ignored) parts.push(`${ignored}개 제외`);
-    if (errors.length) parts.push(`${errors.length}개 실패: ${errors[0]}`);
-
-    setNotice(parts.join(" · ") || "모드 처리가 완료되었습니다.");
-  }, [selectedId, selected, refreshMods, refreshInstances]);
+  };
 
   useEffect(() => {
-    let unlisten: (() => void) | undefined;
-
-    getCurrentWindow()
-      .onDragDropEvent((event) => {
-        if (event.payload.type === "over") setIsDragging(true);
-        if (event.payload.type === "leave") setIsDragging(false);
-        if (event.payload.type === "drop") {
-          setIsDragging(false);
-          void importPaths(event.payload.paths);
-        }
-      })
-      .then((fn) => {
-        unlisten = fn;
-      });
-
-    return () => unlisten?.();
-  }, [importPaths]);
-
+    void checkMinecraft();
+  }, []);
 
   const searchModrinth = async () => {
     if (!selected) {
@@ -488,7 +459,7 @@ export default function App() {
     localStorage.setItem("yeon_username", cleanName);
     localStorage.setItem("yeon_auth_mode", "offline");
     setShowLogin(false);
-    setNotice(`${cleanName} 오프라인 프로필로 로그인했습니다.`);
+    setNotice(`${cleanName} 오프라인 프로필 저장했습니다.`);
   };
 
   const createInstance = async () => {
@@ -510,7 +481,7 @@ export default function App() {
       setShowCreate(false);
       await refreshInstances();
       setSelectedId(created.id);
-      setNotice(`${created.name} 인스턴스를 만들었습니다. 모드를 넣고 플레이를 누르면 필요한 파일이 자동 설치됩니다.`);
+      setNotice(`${created.name} 인스턴스를 만들었습니다. Modrinth에서 모드를 설치하고 플레이를 누르면 해당 인스턴스의 mods 폴더가 적용됩니다.`);
     } catch (error) {
       setNotice(`인스턴스 생성 실패: ${String(error)}`);
     } finally {
@@ -603,6 +574,10 @@ export default function App() {
 
   const play = async () => {
     if (!selected) return;
+    if (minecraftCheck && !minecraftCheck.found) {
+      setNotice("이 PC에서 공식 Minecraft Launcher 또는 .minecraft 폴더를 찾지 못했습니다. Minecraft 설치 확인을 먼저 해 주세요.");
+      return;
+    }
     const cleanName = username.trim() || "Player";
     localStorage.setItem("yeon_username", cleanName);
 
@@ -661,7 +636,7 @@ export default function App() {
             <span className="loginAvatar">{username.slice(0, 1).toUpperCase()}</span>
             <div>
               <strong>{username || "Player"}</strong>
-              <small>{authMode === "offline" ? "오프라인 프로필" : "Microsoft 로그인 준비"}</small>
+              <small>오프라인 프로필</small>
             </div>
           </div>
           <button
@@ -669,8 +644,21 @@ export default function App() {
             type="button"
             onClick={() => setShowLogin(true)}
           >
-            로그인 설정
+            실행 설정
           </button>
+          <button
+            className="minecraftCheckButton"
+            type="button"
+            onClick={() => void checkMinecraft()}
+            disabled={checkingMinecraft}
+          >
+            {checkingMinecraft ? "Minecraft 확인 중..." : "Minecraft 설치 확인"}
+          </button>
+          {minecraftCheck && (
+            <small className={minecraftCheck.found ? "minecraftOk" : "minecraftWarn"}>
+              {minecraftCheck.found ? "Minecraft 설치 확인됨" : "Minecraft 설치 확인 필요"}
+            </small>
+          )}
           <button
             className="updateCheckButton"
             type="button"
@@ -826,21 +814,10 @@ export default function App() {
               </div>
             )}
 
-            <div
-              className={`dropzone ${isDragging ? "dragging" : ""} ${selected.loader === "vanilla" ? "disabledZone" : ""}`}
-            >
+            <div className="modrinthOnlyNotice">
               <div className="dropIcon">🧩</div>
-              {selected.loader === "vanilla" ? (
-                <>
-                  <strong>Vanilla 인스턴스</strong>
-                  <span>모드를 사용하려면 Fabric / Forge / NeoForge / Quilt 인스턴스를 만드세요.</span>
-                </>
-              ) : (
-                <>
-                  <strong>{busy ? "모드 설치 중..." : ".jar 모드를 여기에 끌어다 놓으세요"}</strong>
-                  <span>{loaderLabel[selected.loader]}용 모드는 이 인스턴스의 mods 폴더에 자동 설치됩니다.</span>
-                </>
-              )}
+              <strong>모드는 Modrinth 공식 API로만 설치합니다.</strong>
+              <span>.jar 파일 끌어넣기는 제거했습니다. 아래 검색창에서 모드를 찾아 설치해 주세요.</span>
             </div>
 
             {selected.loader !== "vanilla" && (
@@ -873,7 +850,7 @@ export default function App() {
 
                 <div className="modrinthResults">
                   {modrinthResults.length === 0 ? (
-                    <div className="modrinthEmpty">공식 Modrinth API로 모드를 검색해 보세요.</div>
+                    <div className="modrinthEmpty">Modrinth 공식 API로 모드를 검색해 설치해 보세요.</div>
                   ) : (
                     modrinthResults.map((project) => (
                       <article className="modrinthCard" key={project.project_id}>
@@ -958,8 +935,8 @@ export default function App() {
           <div className="modal loginModal" onMouseDown={(event) => event.stopPropagation()}>
             <div className="modalHeader">
               <div>
-                <p className="eyebrow">ACCOUNT</p>
-                <h2>로그인 설정</h2>
+                <p className="eyebrow">LAUNCH SETTINGS</p>
+                <h2>실행 설정</h2>
               </div>
               <button className="closeButton" onClick={() => setShowLogin(false)}>×</button>
             </div>
@@ -982,20 +959,34 @@ export default function App() {
             </label>
 
             <button className="modalCreateButton" onClick={saveOfflineLogin}>
-              오프라인 프로필로 로그인
+              오프라인 프로필 저장
             </button>
 
-            <section className="loginOption microsoftOption">
+            <section className="loginOption minecraftInstallOption">
               <div>
-                <strong>Microsoft 계정 로그인</strong>
-                <span>정품 멀티플레이와 스킨 적용을 위한 연결 준비 영역입니다.</span>
+                <strong>Minecraft 설치 확인</strong>
+                <span>계정 앱 연결 없이 이 PC의 공식 런처와 .minecraft 폴더만 확인합니다.</span>
               </div>
-              <span>OAuth 앱 등록 필요</span>
+              <span>{minecraftCheck?.found ? "확인됨" : "확인 필요"}</span>
             </section>
 
+            <button
+              className="modalSecondaryButton"
+              type="button"
+              onClick={() => void checkMinecraft()}
+              disabled={checkingMinecraft}
+            >
+              {checkingMinecraft ? "확인 중..." : "Minecraft 설치 다시 확인"}
+            </button>
+
+            {minecraftCheck && (
+              <div className={minecraftCheck.found ? "loginNotice successNotice" : "loginNotice"}>
+                {minecraftCheck.message}
+              </div>
+            )}
+
             <div className="loginNotice">
-              Microsoft 정식 로그인은 런처 소유자의 Microsoft OAuth 앱 등록값이 필요합니다.
-              지금 버전에서는 UI와 실행 구조를 먼저 넣어두고, 오프라인 프로필로 Minecraft 실행을 지원합니다.
+              정품 구매 여부는 계정 인증 없이는 100% 확인할 수 없어서, 이 버전은 계정 앱 연결 없이 공식 Minecraft Launcher와 .minecraft 설치 흔적만 확인합니다.
             </div>
           </div>
         </div>
@@ -1134,7 +1125,7 @@ export default function App() {
             </label>
 
             <div className="quickVersions">
-              {["26.2", "1.21.11", "1.21.1"].map((version) => (
+              {MINECRAFT_VERSIONS.map((version) => (
                 <button key={version} type="button" onClick={() => setEditVersion(version)}>
                   {version}
                 </button>
@@ -1229,7 +1220,7 @@ export default function App() {
             </label>
 
             <div className="quickVersions">
-              {["26.2", "1.21.11", "1.21.1"].map((version) => (
+              {MINECRAFT_VERSIONS.map((version) => (
                 <button key={version} onClick={() => setNewVersion(version)}>
                   {version}
                 </button>

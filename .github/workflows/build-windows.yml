@@ -24,14 +24,13 @@ jobs:
       - name: Install frontend dependencies
         run: npm install
 
-      - name: Build YEON Launcher
+      - name: Build YEON Launcher NSIS
         run: npm run tauri:build
 
-      - name: Upload Windows installers
+      - name: Upload NSIS installer
         uses: actions/upload-artifact@v4
         with:
-          name: YEON-Launcher-Windows-v0.4.2
+          name: YEON-Launcher-Windows-v0.5.0-NSIS
           path: |
             src-tauri/target/release/bundle/nsis/**
-            src-tauri/target/release/bundle/msi/**
           if-no-files-found: error

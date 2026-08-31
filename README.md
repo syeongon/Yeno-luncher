@@ -1,34 +1,31 @@
-# YEON Launcher v0.4.2
+# YEON Launcher v0.5.0
 
-## v0.4.2 빌드 오류 수정
+## 변경사항
 
-이번 버전은 GitHub Actions 빌드에서 발생한 Rust 오류를 수정한 버전입니다.
+- Windows 설치 방식을 NSIS 전용 `.exe` 설치 파일로 변경했습니다.
+- MSI 빌드 산출물은 제거했습니다.
+- 릴리스 실행 파일에서는 CMD 창이 뜨지 않도록 Windows GUI subsystem 설정을 추가했습니다.
+- `.jar` 파일 드래그 앤 드롭 설치 기능을 제거했습니다.
+- 모드는 Modrinth 공식 API 검색/설치 방식만 사용합니다.
+- Microsoft OAuth 앱 등록 방식은 제거했습니다.
+- 대신 `Minecraft 설치 확인` 버튼으로 공식 Minecraft Launcher 또는 `.minecraft` 폴더 존재 여부만 확인합니다.
+- 인스턴스 실행 시 게임 경로를 해당 인스턴스 폴더로 직접 지정해 settings/options/mods가 같은 폴더에 적용되도록 수정했습니다.
+- Minecraft 버전 빠른 선택 목록을 크게 늘렸습니다.
 
-수정 내용:
+## 빌드 결과
 
-- `Launcher::new(options)`를 `let mut launcher = ...`로 변경
-- `launcher.start(tx)`가 mutable borrow를 요구해서 생긴 `E0596` 오류 수정
-- `LaunchEvent` match의 도달할 수 없는 `_ => {}` 패턴 제거
-- 기존 v0.4.1 기능 유지
+GitHub Actions에서 성공하면 Artifact 이름은 다음과 같습니다.
 
-## 유지되는 기능
+`YEON-Launcher-Windows-v0.5.0-NSIS`
 
-- 인스턴스가 없을 때 마크 스타일 고양이 얼굴 표시
-- “새로운 인스턴스를 생성해 보세요” 안내
-- Modrinth 공식 API 모드 검색/설치
-- 모드가 적용된 인스턴스 실행
-- 오프라인 로그인
-- Microsoft 로그인 준비 UI
-- 인스턴스 생성/수정
-- 실행 중인 인스턴스와 코드 표시
-- 업데이트 확인/업데이트 내용 보기
+NSIS 설치 파일 위치:
 
-## 빌드
+`src-tauri/target/release/bundle/nsis/`
 
-GitHub에 업로드한 뒤:
+## 릴리스 만들기
 
-Actions → Build YEON Launcher Windows → Run workflow
-
-성공하면 Artifact 이름은:
-
-YEON-Launcher-Windows-v0.4.2
+1. 이 폴더의 파일을 GitHub 저장소 최상단에 업로드합니다.
+2. `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`의 버전이 모두 `0.5.0`인지 확인합니다.
+3. GitHub에서 태그 `v0.5.0`을 만듭니다.
+4. 태그가 push되면 `.github/workflows/release-windows.yml`이 실행됩니다.
+5. Release에 NSIS `.exe` 설치 파일이 첨부됩니다.
