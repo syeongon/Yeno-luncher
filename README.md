@@ -1,31 +1,59 @@
-# YEON Launcher v0.5.0
+# KMA Launcher v0.6.0
 
-## 변경사항
+Minecraft 모드 인스턴스를 만들고, Modrinth 공식 API로 모드를 설치한 뒤 실행하는 Windows용 런처입니다.
 
-- Windows 설치 방식을 NSIS 전용 `.exe` 설치 파일로 변경했습니다.
-- MSI 빌드 산출물은 제거했습니다.
-- 릴리스 실행 파일에서는 CMD 창이 뜨지 않도록 Windows GUI subsystem 설정을 추가했습니다.
-- `.jar` 파일 드래그 앤 드롭 설치 기능을 제거했습니다.
-- 모드는 Modrinth 공식 API 검색/설치 방식만 사용합니다.
-- Microsoft OAuth 앱 등록 방식은 제거했습니다.
-- 대신 `Minecraft 설치 확인` 버튼으로 공식 Minecraft Launcher 또는 `.minecraft` 폴더 존재 여부만 확인합니다.
-- 인스턴스 실행 시 게임 경로를 해당 인스턴스 폴더로 직접 지정해 settings/options/mods가 같은 폴더에 적용되도록 수정했습니다.
-- Minecraft 버전 빠른 선택 목록을 크게 늘렸습니다.
+## v0.6.0 변경사항
 
-## 빌드 결과
+- 전체 UI를 더 깔끔한 배포용 화면으로 정리
+- 첫 실행 안내 화면 추가
+  - 1단계: 앱 아이콘과 `마인크래프트 런처 크마` 문구가 올라오는 화면
+  - 2단계: 모드 버튼 → Sodium 설치 → 실행 흐름 안내 화면
+  - `시작하기` 클릭 시 공식 Minecraft 웹 로그인 페이지 열림
+- 설정 버튼 클릭 시 톱니바퀴 회전
+- 설정 메뉴가 톱니바퀴 아래에 펼쳐짐
+- 로그인 버튼 클릭 시 공식 Minecraft 로그인 페이지 열림
+- `.jar` 끌어넣는 창 제거
+- Modrinth 공식 API 설치 방식만 유지
+- Modrinth 모드 설치 후 기존 모드 적용 영역에 바로 표시
+- 모드 다운로드 임시 파일 확장자 버그 수정
+- 손상된 모드 파일이 있으면 다시 다운로드하도록 수정
+- NSIS 설치 파일 배포 유지
+- Release 빌드에서 CMD 창 숨김 유지
 
-GitHub Actions에서 성공하면 Artifact 이름은 다음과 같습니다.
+## 빌드
 
-`YEON-Launcher-Windows-v0.5.0-NSIS`
+```bash
+npm install
+npm run tauri:build
+```
 
-NSIS 설치 파일 위치:
+빌드 결과는 아래 폴더에 생성됩니다.
 
-`src-tauri/target/release/bundle/nsis/`
+```text
+src-tauri/target/release/bundle/nsis/
+```
 
-## 릴리스 만들기
+## GitHub Actions 빌드
 
-1. 이 폴더의 파일을 GitHub 저장소 최상단에 업로드합니다.
-2. `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`의 버전이 모두 `0.5.0`인지 확인합니다.
-3. GitHub에서 태그 `v0.5.0`을 만듭니다.
-4. 태그가 push되면 `.github/workflows/release-windows.yml`이 실행됩니다.
-5. Release에 NSIS `.exe` 설치 파일이 첨부됩니다.
+```text
+Actions → Build KMA Launcher Windows → Run workflow
+```
+
+Artifact 이름:
+
+```text
+KMA-Launcher-Windows-v0.6.0-NSIS
+```
+
+## GitHub Release 배포
+
+```bash
+git add .
+git commit -m "Release v0.6.0"
+git push origin main
+
+git tag v0.6.0
+git push origin v0.6.0
+```
+
+태그를 푸시하면 `Release KMA Launcher Windows`가 실행되고, GitHub Releases에 NSIS `.exe` 설치 파일이 올라갑니다.

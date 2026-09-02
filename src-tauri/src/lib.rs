@@ -61,11 +61,6 @@ struct ModInfo {
     mod_id: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
-struct ImportResult {
-    status: String,
-    mod_info: ModInfo,
-}
 
 #[derive(Debug, Serialize)]
 struct LaunchResult {
@@ -430,13 +425,9 @@ fn inspect_mod(path: &Path) -> Result<ModInfo, String> {
     })
 }
 
-fn loader_matches(instance_loader: &str, mod_loader: &str) -> bool {
-    instance_loader.eq_ignore_ascii_case(mod_loader)
-}
-
 
 fn modrinth_user_agent() -> &'static str {
-    "pullgena/yeon-launcher/0.5.0"
+    "pullgena/yeon-launcher/0.6.0"
 }
 
 fn modrinth_loader_category(loader: &str) -> Result<&'static str, String> {
@@ -460,10 +451,15 @@ fn choose_primary_file(version: &ModrinthVersion) -> Result<ModrinthFile, String
     version
         .files
         .iter()
-        .find(|file| file.primary)
-        .or_else(|| version.files.first())
+        .find(|file| file.primary && file.filename.to_lowercase().ends_with(".jar"))
+        .or_else(|| {
+            version
+                .files
+                .iter()
+                .find(|file| file.filename.to_lowercase().ends_with(".jar"))
+        })
         .cloned()
-        .ok_or_else(|| "이 Modrinth 버전에 다운로드 가능한 파일이 없습니다.".to_string())
+        .ok_or_else(|| "이 Modrinth 버전에 다운로드 가능한 .jar 파일이 없습니다.".to_string())
 }
 
 async fn modrinth_get_versions(
@@ -526,29 +522,62 @@ async fn download_modrinth_file(
     is_dependency: bool,
 ) -> Result<(), String> {
     safe_filename(&file.filename)?;
+    if !file.filename.to_lowercase().ends_with(".jar") {
+        return Err(format!("Modrinth 파일이 .jar가 아닙니다: {}", file.filename));
+    }
 
     let target_dir = mods_dir(instance_id)?;
     fs::create_dir_all(&target_dir).map_err(|e| format!("mods 폴더 생성 실패: {e}"))?;
     let target = target_dir.join(&file.filename);
 
     if target.exists() {
-        acc.skipped_files.push(file.filename.clone());
-        if is_dependency {
-            acc.dependency_files.push(file.filename.clone());
+        if inspect_mod(&target).is_ok() {
+            acc.skipped_files.push(file.filename.clone());
+            if is_dependency {
+                acc.dependency_files.push(file.filename.clone());
+            }
+            return Ok(());
         }
-        return Ok(());
+
+        // 이전 실패 빌드에서 잘못 저장된 파일이 있으면 지우고 다시 받습니다.
+        let _ = fs::remove_file(&target);
     }
 
-    let bytes = client
+    let response = client
         .get(&file.url)
         .send()
         .await
-        .map_err(|e| format!("Modrinth 파일 다운로드 실패: {e}"))?
+        .map_err(|e| format!("Modrinth 파일 다운로드 실패: {e}"))?;
+
+    if !response.status().is_success() {
+        return Err(format!(
+            "Modrinth 파일 다운로드 오류: {} ({})",
+            response.status(),
+            file.filename
+        ));
+    }
+
+    let bytes = response
         .bytes()
         .await
         .map_err(|e| format!("Modrinth 파일 읽기 실패: {e}"))?;
 
-    fs::write(&target, &bytes).map_err(|e| format!("Modrinth 파일 저장 실패: {e}"))?;
+    let temp = target_dir.join(format!(".{}.download.jar", file.filename));
+    if temp.exists() {
+        let _ = fs::remove_file(&temp);
+    }
+    fs::write(&temp, &bytes).map_err(|e| format!("Modrinth 임시 파일 저장 실패: {e}"))?;
+
+    // HTML 오류 페이지 같은 잘못된 파일이 mods 폴더에 들어가지 않도록 JAR 검사를 먼저 합니다.
+    if let Err(error) = inspect_mod(&temp) {
+        let _ = fs::remove_file(&temp);
+        return Err(format!("다운로드된 파일이 정상적인 모드 JAR이 아닙니다: {error}"));
+    }
+
+    fs::rename(&temp, &target).or_else(|_| {
+        fs::copy(&temp, &target).and_then(|_| fs::remove_file(&temp))
+    }).map_err(|e| format!("Modrinth 파일 저장 실패: {e}"))?;
+
     acc.installed_files.push(file.filename.clone());
     if is_dependency {
         acc.dependency_files.push(file.filename.clone());
@@ -866,63 +895,6 @@ fn delete_instance(instance_id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn import_mod(
-    source_path: String,
-    instance_id: String,
-) -> Result<ImportResult, String> {
-    let meta = load_meta(&instance_id)?;
-
-    if meta.loader == "vanilla" {
-        return Err(
-            "Vanilla 인스턴스에는 모드를 설치할 수 없습니다. 모드 로더 인스턴스를 사용해 주세요."
-                .to_string(),
-        );
-    }
-
-    let source = PathBuf::from(&source_path);
-    let source_info = inspect_mod(&source)?;
-
-    if let Some(mod_loader) = source_info.loader.as_deref() {
-        if !loader_matches(&meta.loader, mod_loader) {
-            return Err(format!(
-                "이 모드는 {}용으로 보이지만 현재 인스턴스는 {}입니다.",
-                mod_loader.to_uppercase(),
-                meta.loader.to_uppercase()
-            ));
-        }
-    }
-
-    let target_dir = mods_dir(&instance_id)?;
-    fs::create_dir_all(&target_dir)
-        .map_err(|e| format!("mods 폴더를 만들 수 없습니다: {e}"))?;
-
-    let target = target_dir.join(&source_info.filename);
-
-    if target.exists() {
-        let existing_hash = file_sha256(&target)?;
-        if existing_hash == source_info.sha256 {
-            return Ok(ImportResult {
-                status: "already_installed".to_string(),
-                mod_info: inspect_mod(&target)?,
-            });
-        }
-
-        return Err(format!(
-            "같은 이름의 다른 파일({})이 이미 설치되어 있습니다.",
-            source_info.filename
-        ));
-    }
-
-    fs::copy(&source, &target)
-        .map_err(|e| format!("모드 복사 실패: {e}"))?;
-
-    Ok(ImportResult {
-        status: "installed".to_string(),
-        mod_info: inspect_mod(&target)?,
-    })
-}
-
-#[tauri::command]
 fn list_installed_mods(instance_id: String) -> Result<Vec<ModInfo>, String> {
     let target_dir = mods_dir(&instance_id)?;
     if !target_dir.exists() {
@@ -1109,7 +1081,10 @@ async fn launch_instance(
     username: String,
 ) -> Result<LaunchResult, String> {
     let mut meta = load_meta(&instance_id)?;
+    let launcher_root = root_dir()?;
     let game_dir = instance_dir(&instance_id)?;
+    fs::create_dir_all(&launcher_root)
+        .map_err(|e| format!("런처 게임 폴더 생성 실패: {e}"))?;
     fs::create_dir_all(&game_dir)
         .map_err(|e| format!("인스턴스 게임 폴더 생성 실패: {e}"))?;
 
@@ -1130,7 +1105,7 @@ async fn launch_instance(
     };
 
     let options = LaunchOptions {
-        path: game_dir.clone(),
+        path: launcher_root.clone(),
         version: meta.minecraft_version.clone(),
         authenticator: auth,
         memory: MemoryConfig {
@@ -1146,7 +1121,7 @@ async fn launch_instance(
         verify: true,
         game_args: vec![],
         jvm_args: vec![],
-        instance: None,
+        instance: Some(instance_id.clone()),
         url: None,
         mcp: None,
         intel_enabled_mac: false,
@@ -1337,30 +1312,14 @@ fn open_update_page(url: String) -> Result<(), String> {
         return Err("허용되지 않은 업데이트 주소입니다.".to_string());
     }
 
-    #[cfg(target_os = "windows")]
-    {
-        std::process::Command::new("cmd")
-            .args(["/C", "start", "", &url])
-            .spawn()
-            .map_err(|e| format!("업데이트 페이지 열기 실패: {e}"))?;
-    }
+    open::that(url).map_err(|e| format!("업데이트 페이지 열기 실패: {e}"))?;
+    Ok(())
+}
 
-    #[cfg(target_os = "macos")]
-    {
-        std::process::Command::new("open")
-            .arg(&url)
-            .spawn()
-            .map_err(|e| format!("업데이트 페이지 열기 실패: {e}"))?;
-    }
-
-    #[cfg(all(unix, not(target_os = "macos")))]
-    {
-        std::process::Command::new("xdg-open")
-            .arg(&url)
-            .spawn()
-            .map_err(|e| format!("업데이트 페이지 열기 실패: {e}"))?;
-    }
-
+#[tauri::command]
+fn open_minecraft_login_page() -> Result<(), String> {
+    open::that("https://www.minecraft.net/ko-kr/login?return_url=%2Fprofile")
+        .map_err(|e| format!("Minecraft 로그인 페이지 열기 실패: {e}"))?;
     Ok(())
 }
 
@@ -1377,7 +1336,8 @@ pub fn run() {
             search_modrinth_mods,
             install_modrinth_mod,
             launch_instance,
-            open_update_page
+            open_update_page,
+            open_minecraft_login_page
         ])
         .run(tauri::generate_context!())
         .expect("error while running YEON Launcher");
